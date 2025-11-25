@@ -15,7 +15,8 @@ class Platform(p.sprite.Sprite):
 
         self.image = p.transform.scale(image, (width*set_tile_scale, height*set_tile_scale)).convert_alpha()
         self.rect = self.image.get_rect()
-        self.set_coords = (x*set_tile_scale, y*set_tile_scale)
+        self.set_coords_x = x*set_tile_scale
+        self.set_coords_y = y*set_tile_scale
 
 
 
@@ -25,6 +26,8 @@ class Game(p.sprite.Sprite):
         p.display.set_caption("Платформер")
         self.clock = p.time.Clock()
         self.is_running = False
+
+        self.keys = p.key.get_pressed()
 
         self.map = pt.load_pygame("maps/map.tmx")
 
@@ -47,14 +50,19 @@ class Game(p.sprite.Sprite):
                     self.all_sprites.add(platform)
                     self.all_platforms.add(platform)
 
+        self.cam_speed = 10
+        self.x = SCREEN_WIDTH / 2
+        self.y = SCREEN_HEIGHT / 2
+
         self.run()
+
+
+
 
     def run(self):
         self.is_running = True
         while self.is_running:
-            self.event()
             self.update()
-            self.draw()
             self.clock.tick(FPS)
         quit()
 
@@ -63,14 +71,24 @@ class Game(p.sprite.Sprite):
             if event.type == p.QUIT:
                 self.is_running = False
 
+        if self.keys[p.K_d]:
+            for platform in self.all_platforms:
+                platform.set_coords_x -= self.cam_speed
+        if self.keys[p.K_a]:
+            for platform in self.all_platforms:
+                platform.set_coords_x += self.cam_speed
+
     def update(self):
-        pass
+        self.event()
+        self.draw()
+        self.keys = p.key.get_pressed()
+
 
     def draw(self):
         self.screen.fill("white")
 
         for platform in self.all_platforms:
-            self.screen.blit(platform.image, platform.set_coords)
+            self.screen.blit(platform.image, (platform.set_coords_x, platform.set_coords_y))
 
         p.display.flip()
 
