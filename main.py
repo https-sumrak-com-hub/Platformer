@@ -19,9 +19,44 @@ class Platform(p.sprite.Sprite):
         self.set_coords_y = y*set_tile_scale
 
 
+class Player(p.sprite.Sprite):
+    def __init__(self, map_width, map_height):
+        super(Player, self).__init__()
+
+        self.image = p.Surface((50,50))
+        self.image.fill("red")
+
+        self.rect = self.image.get_rect()
+        self.rect.center = (200, 100)  # Начальное положение персонажа
+
+        # Начальная скорость и гравитация
+        self.velocity_x = 0
+        self.velocity_y = 0
+        self.gravity = 2
+        self.is_jumping = False
+        self.map_width, self.map_height = map_width * set_tile_scale, map_height * set_tile_scale
+
+    def move(self):
+        match self.keys:
+            case p.K_d:
+                self.velocity_x = 10
+            case p.K_a:
+                self.velocity_x = -10
+            case None:
+                self.velocity_x = 0
+        print(self.velocity_x)
+
+    # new_x = self.rect.x + self.velocity_x
+    # if 0 <= new_x <= self.map_width - self.rect.width:
+    #     self.rect.x = new_x
+
+
+    def update(self, platforms):
+        self.move()
 
 class Game(p.sprite.Sprite):
     def __init__(self):
+        self.pers = Player
         self.screen = p.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         p.display.set_caption("Платформер")
         self.clock = p.time.Clock()
@@ -81,6 +116,7 @@ class Game(p.sprite.Sprite):
     def update(self):
         self.event()
         self.draw()
+        self.pers.update(self, self.all_platforms)
         self.keys = p.key.get_pressed()
 
 
