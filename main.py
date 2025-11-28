@@ -9,6 +9,11 @@ SCREEN_HEIGHT = si.get_monitors()[0].height
 FPS = 80
 set_tile_scale = 2
 
+def li(file, width, height):
+    image = p.image.load(file).convert_alpha()
+    image = p.transform.scale(image, (width, height))
+    return image
+
 class Platform(p.sprite.Sprite):
     def __init__(self, image, x, y, width, height):
         super(Platform, self).__init__()
@@ -20,11 +25,13 @@ class Platform(p.sprite.Sprite):
 
 
 class Player(p.sprite.Sprite):
-    def __init__(self, map_width, map_height):
+    def __init__(self, screen):
         super(Player, self).__init__()
+        self.screen = screen
+        self.keys = p.key.get_pressed()
 
-        self.image = p.Surface((50,50))
-        self.image.fill("red")
+        self.image = li("maps/Tiles/Assets/Assets.png", 50, 50)
+
 
         self.rect = self.image.get_rect()
         self.rect.center = (200, 100)  # Начальное положение персонажа
@@ -34,17 +41,45 @@ class Player(p.sprite.Sprite):
         self.velocity_y = 0
         self.gravity = 2
         self.is_jumping = False
-        self.map_width, self.map_height = map_width * set_tile_scale, map_height * set_tile_scale
+        # self.map_width, self.map_height = map_width * set_tile_scale, map_height * set_tile_scale
+
+    def ENSTEIN(self, platforms):
+        for platform in platforms:
+            if platform.rect.collidepoint(self.rect.midtop):
+                self.rect.y = self.platform.midbottom.y
+                self.velocity_y += self.gravity
+
+            if platform.rect.collidepoint(self.rect.midbottom):
+                self.rect.y = self.platform.midtop.y
+                self.velocity_y = 0
 
     def move(self):
-        match self.keys:
-            case p.K_d:
-                self.velocity_x = 10
-            case p.K_a:
-                self.velocity_x = -10
-            case None:
-                self.velocity_x = 0
-        print(self.velocity_x)
+        if self.keys[p.K_d]:
+            self.velocity_x = 10
+
+        elif self.keys[p.K_a]:
+            self.velocity_x = -10
+
+        elif self.keys[p.K_w]:
+            self.velocity_y = 10
+
+        elif self.keys[p.K_s]:
+            self.velocity_y = -10
+
+
+        self.rect.x += self.velocity_x
+
+        self.velocity_y += self.gravity
+        self.rect.y += self.velocity_y
+
+       # match a:
+        #     case p.K_d:
+        #         self.velocity_x = 10
+        #     case p.K_a:
+        #         self.velocity_x = -10
+        #     case None:
+        #         self.velocity_x = 0
+        # print(self.velocity_x)
 
     # new_x = self.rect.x + self.velocity_x
     # if 0 <= new_x <= self.map_width - self.rect.width:
@@ -52,12 +87,18 @@ class Player(p.sprite.Sprite):
 
 
     def update(self, platforms):
+        self.ENSTEIN(platforms)
+        self.keys = p.key.get_pressed()
         self.move()
+
+    def draw(self):
+        self.screen.blit(self.image, self.rect)
 
 class Game(p.sprite.Sprite):
     def __init__(self):
-        self.pers = Player
         self.screen = p.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+        self.pers = Player(self.screen)
+
         p.display.set_caption("Платформер")
         self.clock = p.time.Clock()
         self.is_running = False
@@ -116,7 +157,7 @@ class Game(p.sprite.Sprite):
     def update(self):
         self.event()
         self.draw()
-        self.pers.update(self, self.all_platforms)
+        self.pers.update(self.all_sprites)
         self.keys = p.key.get_pressed()
 
 
@@ -125,6 +166,8 @@ class Game(p.sprite.Sprite):
 
         for platform in self.all_platforms:
             self.screen.blit(platform.image, (platform.set_coords_x, platform.set_coords_y))
+
+        self.pers.draw()
 
         p.display.flip()
 
