@@ -44,14 +44,18 @@ class Player(p.sprite.Sprite):
         # self.map_width, self.map_height = map_width * set_tile_scale, map_height * set_tile_scale
 
     def ENSTEIN(self, platforms):
+        print(self.rect)
         for platform in platforms:
-            if platform.rect.collidepoint(self.rect.midtop):
-                self.rect.y = self.platform.midbottom.y
-                self.velocity_y += self.gravity
+            if platform.rect.collidepoint(self.rect[0] + 25, self.rect[1] + 25):
+                self.rect = (self.rect[0], 100)
+                self.velocity_y = 10
 
-            if platform.rect.collidepoint(self.rect.midbottom):
-                self.rect.y = self.platform.midtop.y
+            elif platform.rect.collidepoint(self.rect[1] - 50, 100):
+                self.rect = (self.rect[0], 100)
                 self.velocity_y = 0
+
+            else:
+                self.velocity_y = -10
 
     def move(self):
         if self.keys[p.K_d]:
@@ -61,18 +65,19 @@ class Player(p.sprite.Sprite):
             self.velocity_x = -10
 
         elif self.keys[p.K_w]:
-            self.velocity_y = 10
-
-        elif self.keys[p.K_s]:
             self.velocity_y = -10
 
+        elif self.keys[p.K_s]:
+            self.velocity_y = 10
 
-        self.rect.x += self.velocity_x
+        else:
+            self.velocity_x = 0
+            self.velocity_y = 0
 
         self.velocity_y += self.gravity
-        self.rect.y += self.velocity_y
+        self.rect = (self.rect[0] + self.velocity_x, self.rect[1] + self.velocity_y)
 
-       # match a:
+    # match a:
         #     case p.K_d:
         #         self.velocity_x = 10
         #     case p.K_a:
