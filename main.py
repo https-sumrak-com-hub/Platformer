@@ -16,8 +16,11 @@ def li(file, width, height):
     return image
 
 class Platform(p.sprite.Sprite):
-    def __init__(self, image, x, y, width, height):
+    def __init__(self, image, x, y, width, height, layer_name, id):
         super(Platform, self).__init__()
+        self.layer = layer_name
+        self.id = id
+
         self.height = height
         self.image = p.transform.scale(image, (width * set_tile_scale, height * set_tile_scale)).convert_alpha()
         self.rect = self.image.get_rect()
@@ -53,15 +56,63 @@ class Player(p.sprite.Sprite):
         self.gravity = 2
         # self.map_width, self.map_height = map_width * set_tile_scale, map_height * set_tile_scale
 
+        self.collides = {
+            "bridge": [46, 47, 48],
+            "ladder": [43, 44, 45]
+        }
+
     def gravity_checker(self, platforms):
         for platform in platforms:
-            if self.rect.colliderect(platform.rect):
-                if self.velocity_y > 0:
-                    self.rect.bottom = platform.rect.top
-                    self.velocity_y = 0
-                if self.velocity_y < 0:
-                    self.rect.top = platform.rect.bottom
-                    self.velocity_y = self.gravity
+
+            if platform.rect.collidepoint(self.rect.midbottom):
+                self.rect.bottom = platform.rect.top
+                self.velocity_y = 0
+                self.is_jumping = False
+
+            if platform.rect.collidepoint(self.rect.midtop):
+                self.rect.top = platform.rect.bottom
+                self.velocity_y = 0
+
+                # КОЛЛИЗИИ ПО X
+            if platform.rect.collidepoint(self.rect.midright):
+                self.rect.right = platform.rect.left
+
+            if platform.rect.collidepoint(self.rect.midleft):
+                self.rect.left = platform.rect.right
+
+            # if self.rect.colliderect(platform.rect):
+            #     if platform.rect.y > self.rect.y:
+            #         self.velocity_x = -1
+            #     if self.velocity_y > 0:
+            #         self.rect.bottom = platform.rect.top
+            #         self.velocity_y = 0
+            #     if self.velocity_y < 0:
+            #         self.rect.top = platform.rect.bottom
+            #         self.velocity_y = self.gravity
+            # if platform.rect.collidepoint(self.rect.midright):
+            #     self.rect.right = platform.rect.left
+            #
+            # if platform.rect.collidepoint(self.rect.midleft):
+            #     self.rect.left = platform.rect.right
+
+    def collide_checker(self, collides):
+        keys = p.key.get_pressed()
+
+        for collide in collides:
+            if self.rect.colliderect(collide.rect):
+                if collide.id in self.collides["bridge"]:
+                    if self.velocity_y > 0:
+                        self.rect.bottom = collide.rect.top
+                        self.velocity_y = 0
+                    if self.velocity_y < 0:
+                        self.rect.top = collide.rect.bottom
+                        self.velocity_y = self.gravity
+
+                if collide.id in self.collides["ladder"]:
+                    if keys[p.K_w]:
+                        self.velocity_y = self.vel_def
+                    if keys[p.K_s]:
+                        self.velocity_y = -self.vel_def
 
     def move(self):
         keys = p.key.get_pressed()
@@ -110,10 +161,11 @@ class Player(p.sprite.Sprite):
     #     self.rect.x = new_x
 
 
-    def update(self, platforms):
+    def update(self, map_layers):
         self.move()
         self.rect.y += self.velocity_y
-        self.gravity_checker(platforms)
+        self.gravity_checker(map_layers["platform"])
+        # self.collide_checker(map_layers["collides"])
 
     def draw(self):
         self.screen.blit(self.image, self.rect)
@@ -137,6 +189,8 @@ class Game(p.sprite.Sprite):
                             "decorations": self.layer_loader("decorations")
                           }
 
+
+
         self.cam_speed = self.pers.vel_def
         self.x = SCREEN_WIDTH / 2
         self.y = SCREEN_HEIGHT / 2
@@ -154,10 +208,13 @@ class Game(p.sprite.Sprite):
                     x * self.map.tilewidth,
                     y * self.map.tileheight,
                     self.map.tilewidth,
-                    self.map.tileheight
+                    self.map.tileheight,
+                    layer_name,
+                    gid
                 )
 
                 platforms.add(platform)
+
         return platforms
 
 
@@ -185,7 +242,7 @@ class Game(p.sprite.Sprite):
     def update(self):
         self.event()
         self.draw()
-        self.pers.update(self.map_layers["platform"])
+        self.pers.update(self.map_layers)
         self.keys = p.key.get_pressed()
 
 
