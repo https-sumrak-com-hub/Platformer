@@ -41,7 +41,7 @@ class Player(p.sprite.Sprite):
         super(Player, self).__init__()
         self.screen = screen
 
-        self.image = li("maps/Tiles/Assets/Assets.png", 25, 25)
+        self.image = li("maps/Tiles/Assets/Assets.png", 15, 15)
 
         self.rect = self.image.get_rect()
         self.rect.center = (200, 100)  # Начальное положение персонажа
@@ -51,7 +51,7 @@ class Player(p.sprite.Sprite):
         self.velocity_y = 0
         self.is_jumping = False
 
-        self.vel_def = 2
+        self.vel_def = 4
         self.vel_fast = 6
         self.gravity = 2
         # self.map_width, self.map_height = map_width * set_tile_scale, map_height * set_tile_scale
@@ -61,39 +61,24 @@ class Player(p.sprite.Sprite):
             "ladder": [43, 44, 45]
         }
 
-    def gravity_checker(self, platforms):
+    def gravity_checker(self, platforms, vector):
         for platform in platforms:
+            if self.rect.colliderect(platform.rect):
+                if vector == "x":
+                    if self.velocity_x > 0:
+                        self.rect.right = platform.rect.left
+                    else:
+                        self.rect.left = platform.rect.right
+                    self.velocity_x = 0
 
-            if platform.rect.collidepoint(self.rect.midbottom):
-                self.rect.bottom = platform.rect.top
-                self.velocity_y = 0
-                self.is_jumping = False
-
-            if platform.rect.collidepoint(self.rect.midtop):
-                self.rect.top = platform.rect.bottom
-                self.velocity_y = 0
-
-                # КОЛЛИЗИИ ПО X
-            if platform.rect.collidepoint(self.rect.midright):
-                self.rect.right = platform.rect.left
-
-            if platform.rect.collidepoint(self.rect.midleft):
-                self.rect.left = platform.rect.right
-
-            # if self.rect.colliderect(platform.rect):
-            #     if platform.rect.y > self.rect.y:
-            #         self.velocity_x = -1
-            #     if self.velocity_y > 0:
-            #         self.rect.bottom = platform.rect.top
-            #         self.velocity_y = 0
-            #     if self.velocity_y < 0:
-            #         self.rect.top = platform.rect.bottom
-            #         self.velocity_y = self.gravity
-            # if platform.rect.collidepoint(self.rect.midright):
-            #     self.rect.right = platform.rect.left
-            #
-            # if platform.rect.collidepoint(self.rect.midleft):
-            #     self.rect.left = platform.rect.right
+                elif vector == "y":
+                    if self.velocity_y > 0:
+                        self.rect.bottom = platform.rect.top
+                        self.velocity_y = 0
+                        self.is_jumping = False
+                    else:
+                        self.rect.top = platform.rect.bottom
+                        self.velocity_y = 0
 
     def collide_checker(self, collides):
         keys = p.key.get_pressed()
@@ -117,33 +102,27 @@ class Player(p.sprite.Sprite):
     def move(self):
         keys = p.key.get_pressed()
 
-        if keys[p.K_d]:
-            self.velocity_x = self.vel_def
+        if keys[p.K_d] or keys[p.K_a] or keys[p.K_SPACE] or keys[p.K_LSHIFT]:
+            if keys[p.K_SPACE]:
+                self.velocity_y = -self.vel_def
 
-        elif keys[p.K_a]:
-            self.velocity_x = -self.vel_def
+            if keys[p.K_LSHIFT]:
+                self.velocity_y = self.vel_def
 
-        elif keys[p.K_SPACE]:
-            self.velocity_y = -self.vel_def
+            if keys[p.K_d]:
+                self.velocity_x = self.vel_def
 
-        elif keys[p.K_LSHIFT]:
-            self.velocity_y = self.vel_def
+            elif keys[p.K_a]:
+                self.velocity_x = -self.vel_def
+
+            else:
+                self.velocity_x *= 0.2
 
         else:
-            smoothless = 0.4
-            time = p.time.get_ticks() + 50
-            if p.time.get_ticks() < time:
-                if self.velocity_x > 0:
-                    self.velocity_x -= smoothless
-                elif self.velocity_x < 0:
-                    self.velocity_x += smoothless
-                if self.velocity_y > 0:
-                    self.velocity_y -= smoothless
-                elif self.velocity_y < 0:
-                    self.velocity_y += smoothless
-
+            self.velocity_x *= 0.2
 
         self.velocity_y += self.gravity
+
         self.rect.x += self.velocity_x
 
 
@@ -163,8 +142,9 @@ class Player(p.sprite.Sprite):
 
     def update(self, map_layers):
         self.move()
+        self.gravity_checker(map_layers["platform"], "x")
         self.rect.y += self.velocity_y
-        self.gravity_checker(map_layers["platform"])
+        self.gravity_checker(map_layers["platform"], "y")
         # self.collide_checker(map_layers["collides"])
 
     def draw(self):
@@ -188,12 +168,6 @@ class Game(p.sprite.Sprite):
                             "collides": self.layer_loader("collides"),
                             "decorations": self.layer_loader("decorations")
                           }
-
-
-
-        self.cam_speed = self.pers.vel_def
-        self.x = SCREEN_WIDTH / 2
-        self.y = SCREEN_HEIGHT / 2
 
         self.run()
 
@@ -230,18 +204,10 @@ class Game(p.sprite.Sprite):
             if event.type == p.QUIT:
                 self.is_running = False
 
-        if self.keys[p.K_d] or self.keys[p.K_a]:
-            for layer_name in self.map_layers:
-                for platform in self.map_layers[layer_name]:
-                    if self.keys[p.K_d]:
-                        platform.set_coords_x -= self.cam_speed
-                    if self.keys[p.K_a]:
-                        platform.set_coords_x += self.cam_speed
-                    platform.update()
-
     def update(self):
         self.event()
         self.draw()
+        self.map_layers["platform"].update()
         self.pers.update(self.map_layers)
         self.keys = p.key.get_pressed()
 
