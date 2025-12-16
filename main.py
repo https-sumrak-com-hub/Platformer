@@ -41,7 +41,7 @@ class Player(p.sprite.Sprite):
         super(Player, self).__init__()
         self.screen = screen
 
-        self.image = li("maps/Tiles/Assets/Assets.png", 15, 15)
+        self.image = li("maps/Tiles/Assets/Assets.png", 50, 50)
 
         self.rect = self.image.get_rect()
         self.rect.center = (200, 100)  # Начальное положение персонажа
@@ -49,7 +49,7 @@ class Player(p.sprite.Sprite):
         # Начальная скорость и гравитация
         self.velocity_x = 0
         self.velocity_y = 0
-        self.is_jumping = False
+        self.jump_que = False
 
         self.vel_def = 4
         self.vel_fast = 6
@@ -75,7 +75,7 @@ class Player(p.sprite.Sprite):
                     if self.velocity_y > 0:
                         self.rect.bottom = platform.rect.top
                         self.velocity_y = 0
-                        self.is_jumping = False
+                        self.jump_que = True
                     else:
                         self.rect.top = platform.rect.bottom
                         self.velocity_y = 0
@@ -103,8 +103,9 @@ class Player(p.sprite.Sprite):
         keys = p.key.get_pressed()
 
         if keys[p.K_d] or keys[p.K_a] or keys[p.K_SPACE] or keys[p.K_LSHIFT]:
-            if keys[p.K_SPACE]:
-                self.velocity_y = -self.vel_def
+            if keys[p.K_SPACE] and self.jump_que:
+                self.velocity_y -= 30
+                self.jump_que = False
 
             if keys[p.K_LSHIFT]:
                 self.velocity_y = self.vel_def
@@ -145,7 +146,7 @@ class Player(p.sprite.Sprite):
         self.gravity_checker(map_layers["platform"], "x")
         self.rect.y += self.velocity_y
         self.gravity_checker(map_layers["platform"], "y")
-        # self.collide_checker(map_layers["collides"])
+        self.collide_checker(map_layers["collides"])
 
     def draw(self):
         self.screen.blit(self.image, self.rect)
@@ -168,6 +169,12 @@ class Game(p.sprite.Sprite):
                             "collides": self.layer_loader("collides"),
                             "decorations": self.layer_loader("decorations")
                           }
+
+        self.map_pixel_width = self.map.width * self.map.tilewidth * set_tile_scale
+        self.map_pixel_height = self.map.height * self.map.tileheight * set_tile_scale
+
+        self.camX = 0
+        self.camY = 0
 
         self.run()
 
@@ -204,11 +211,23 @@ class Game(p.sprite.Sprite):
             if event.type == p.QUIT:
                 self.is_running = False
 
+            if event.type == p.KEYDOWN:
+                if event.key == p.K_d:
+                    self.camX += 15
+
+                if event.key == p.K_a:
+                    self.camX -= 15
+
     def update(self):
+        self.camX = max(0, min(self.pers.rect.x - SCREEN_WIDTH / 2, self.map_pixel_width - SCREEN_WIDTH))
+        self.camY = max(0, min(self.pers.rect.y - SCREEN_HEIGHT / 2, self.map_pixel_height - SCREEN_HEIGHT))
+
+
         self.event()
         self.draw()
         self.map_layers["platform"].update()
         self.pers.update(self.map_layers)
+
         self.keys = p.key.get_pressed()
 
 
@@ -216,7 +235,7 @@ class Game(p.sprite.Sprite):
         self.screen.fill("white")
         for layer_names in self.map_layers:
             for platform in self.map_layers[layer_names]:
-                self.screen.blit(platform.image, (platform.set_coords_x, platform.set_coords_y))
+                self.screen.blit(platform.image, platform.rect.move(-self.camX, -self.camY))
 
         self.pers.draw()
 

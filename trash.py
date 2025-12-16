@@ -102,10 +102,9 @@ def daun():
         a.right(90)
 
 
-def hahaha_ya_sumasoshel_yzhe_nahui():
+def hahaha_ya_sumasoshel_yzh():
     letters = ['Т', 'Ь', 'Ю', 'Р', 'И', 'Н', 'Г']
 
-    # Все шестибуквенные слова без повторений
     words = [''.join(p) for p in itertools.permutations(letters, 6)]
 
     vowels = {'Ю', 'И'}
@@ -113,16 +112,15 @@ def hahaha_ya_sumasoshel_yzhe_nahui():
     def ok(w: str) -> bool:
         for i, ch in enumerate(w):
             if ch == 'Ь':
-                # 1) Нельзя в начале
                 if i == 0:
                     return False
-                # 2) Нельзя после гласных Ю или И
+
                 if w[i - 1] in vowels:
                     return False
         return True
 
     valid = [w for w in words if ok(w)]
 
-    print(len(words))  # 5040 — всего перестановок
-    print(len(valid))  # 3120 — удовлетворяют условию
+    print(len(words))
+    print(len(valid))
 
