@@ -31,10 +31,6 @@ class Platform(p.sprite.Sprite):
         self.rect.x = self.set_coords_x
         self.rect.y = self.set_coords_y
 
-    def update(self):
-        self.rect.x = self.set_coords_x
-        self.rect.y = self.set_coords_y
-
 
 class Player(p.sprite.Sprite):
     def __init__(self, screen):
@@ -44,17 +40,15 @@ class Player(p.sprite.Sprite):
         self.image = li("maps/Tiles/Assets/Assets.png", 50, 50)
 
         self.rect = self.image.get_rect()
-        self.rect.center = (200, 100)  # Начальное положение персонажа
+        self.rect.center = (200, 100)
 
-        # Начальная скорость и гравитация
         self.velocity_x = 0
         self.velocity_y = 0
         self.jump_que = False
 
-        self.vel_def = 4
-        self.vel_fast = 6
+        self.vel_def = 6
+        self.vel_fast = 12
         self.gravity = 2
-        # self.map_width, self.map_height = map_width * set_tile_scale, map_height * set_tile_scale
 
         self.collides = {
             "bridge": [46, 47, 48],
@@ -126,21 +120,6 @@ class Player(p.sprite.Sprite):
 
         self.rect.x += self.velocity_x
 
-
-    # match a:
-        #     case p.K_d:
-        #         self.velocity_x = 10
-        #     case p.K_a:
-        #         self.velocity_x = -10
-        #     case None:
-        #         self.velocity_x = 0
-        # print(self.velocity_x)
-
-    # new_x = self.rect.x + self.velocity_x
-    # if 0 <= new_x <= self.map_width - self.rect.width:
-    #     self.rect.x = new_x
-
-
     def update(self, map_layers):
         self.move()
         self.gravity_checker(map_layers["platform"], "x")
@@ -148,8 +127,9 @@ class Player(p.sprite.Sprite):
         self.gravity_checker(map_layers["platform"], "y")
         self.collide_checker(map_layers["collides"])
 
-    def draw(self):
-        self.screen.blit(self.image, self.rect)
+    def draw(self, camX, camY):
+        self.screen.blit(self.image,
+                         (self.rect.x - camX, self.rect.y - camY))
 
 class Game(p.sprite.Sprite):
     def __init__(self):
@@ -219,14 +199,13 @@ class Game(p.sprite.Sprite):
                     self.camX -= 15
 
     def update(self):
+        self.event()
+
         self.camX = max(0, min(self.pers.rect.x - SCREEN_WIDTH / 2, self.map_pixel_width - SCREEN_WIDTH))
         self.camY = max(0, min(self.pers.rect.y - SCREEN_HEIGHT / 2, self.map_pixel_height - SCREEN_HEIGHT))
 
-
-        self.event()
-        self.draw()
-        self.map_layers["platform"].update()
         self.pers.update(self.map_layers)
+        self.draw()
 
         self.keys = p.key.get_pressed()
 
@@ -235,9 +214,12 @@ class Game(p.sprite.Sprite):
         self.screen.fill("white")
         for layer_names in self.map_layers:
             for platform in self.map_layers[layer_names]:
-                self.screen.blit(platform.image, platform.rect.move(-self.camX, -self.camY))
+                self.screen.blit(platform.image,
+                                 (platform.set_coords_x - self.camX,
+                                  platform.set_coords_y - self.camY))
 
-        self.pers.draw()
+                # Игрок тоже с камерой
+        self.pers.draw(self.camX, self.camY)
 
 
         p.display.flip()
