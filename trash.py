@@ -14,3 +14,5 @@ def white_background_to_transparent_background(path):
 
     img.putdata(new_data)
     img.save(path, "PNG")
+
+white_background_to_transparent_background("dead_text.png")

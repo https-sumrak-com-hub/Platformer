@@ -2,11 +2,11 @@ import pygame as p
 import screeninfo as si
 import pytmx as pt
 from PIL import Image
-
-from txt.main import scr_w
+import MAINMENU as mn
 
 p.init()
 p.mixer.init()
+
 
 SCREEN_WIDTH = 1920
 SCREEN_HEIGHT = 1080
@@ -64,12 +64,12 @@ class Player(p.sprite.Sprite):
         super(Player, self).__init__()
         self.screen = screen
         self.move_que = True
+        self.die = False
+        self.dead_music = p.mixer.Sound("dead_sound.mp3")
 
         self.anims = load_anims("sprites/Sprite Pack 3/2 - Twiggy/Back_Turned (32 x 32).png")
 
         self.image = li("maps/Tiles/Assets/Assets.png", 50, 50)
-
-
 
         self.rect = self.image.get_rect()
         self.rect.center = (200, 100)
@@ -78,8 +78,8 @@ class Player(p.sprite.Sprite):
         self.velocity_y = 0
         self.jump_que = False
 
-        self.vel_def = 6
-        self.vel_fast = 12
+        self.vel_def = 10
+        self.vel_fast = 16
         self.gravity = 2
 
         self.collides = {
@@ -107,7 +107,6 @@ class Player(p.sprite.Sprite):
                         self.rect.top = platform.rect.bottom
                         self.velocity_y = 0
 
-
     def collide_checker(self, collides):
         keys = p.key.get_pressed()
 
@@ -129,8 +128,7 @@ class Player(p.sprite.Sprite):
 
                 if collide.id in self.collides["thorns"]:
                     self.move_que = False
-                    self.dead_anim()
-
+                    self.die = True
 
     def move(self):
         keys = p.key.get_pressed()
@@ -158,27 +156,6 @@ class Player(p.sprite.Sprite):
 
         self.velocity_y += self.gravity
 
-    def dead_anim(self):
-        dead_text = Image.open("dead_text.png").convert("RGBA")
-        datas = dead_text.getdata()
-        new_data = []
-
-        dead_sound = p.music.mixer.load("dead_sound.mp3")
-        dead_background = li("dead.png", SCREEN_WIDTH, SCREEN_HEIGHT)
-
-        p.music.mixer.play(dead_sound)
-        self.screen.blit(dead_background, (0, 0))
-
-        rect = dead_text.get_rect()
-        rect.center = (SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2)
-
-        for i in range(256):
-            for item in datas:
-                # Изменить альфа (прозрачность) на 128 (50% прозрачности, 0=прозр., 255=непрозр.)
-                new_data.append((*item[:3], i))
-
-            self.screen.blit(dead_text, rect)
-
     def update(self, map_layers):
         self.collide_checker(map_layers["collides"])
         self.move()
@@ -189,8 +166,21 @@ class Player(p.sprite.Sprite):
 
 
     def draw(self, camX, camY):
+
         self.screen.blit(self.image, (self.rect.x - camX, self.rect.y - camY))
 
+        if self.die: #СМЕРТЬ
+            keys = p.key.get_pressed()
+            self.screen.blit(li("dead_text.png", SCREEN_WIDTH, SCREEN_HEIGHT), (0, 0))
+            self.dead_music.play()
+
+            replay_font = (p.font.Font(None, 150)).render("НАЖМИТЕ ESC ДЛЯ ВЫХОДА В МЕНЮ", False, "black")
+            replay_font_rect = replay_font.get_rect()
+            replay_font_rect.center = (SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2)
+            self.screen.blit(replay_font, replay_font_rect)
+
+            if keys[p.K_ESCAPE]:
+                Game()
 
 
 class Game(p.sprite.Sprite):
@@ -235,12 +225,10 @@ class Game(p.sprite.Sprite):
                     layer_name,
                     gid
                 )
-                if layer_name == "collides":
-                    print(gid)
+
                 platforms.add(platform)
 
         return platforms
-
 
     def run(self):
         self.is_running = True
@@ -260,6 +248,24 @@ class Game(p.sprite.Sprite):
 
                 if event.key == p.K_a:
                     self.camX -= 15
+
+                if event.key == p.K_ESCAPE:
+                    self.game_menu()
+
+    def game_menu(self):
+        self.pers.move_que = False
+        background = li("images/S_background.png", SCREEN_WIDTH, SCREEN_HEIGHT)
+
+        buttons = [
+            mn.Button("lenta", "RESTART", mn.avg_b_x, SCREEN_HEIGHT // 4 * 1.5, mn.b_w, mn.b_h, mn.font, func=lambda: Game()),
+            mn.Button("lenta", "SAVE AND QUIT", mn.avg_b_x, SCREEN_HEIGHT // 4 * 2, mn.b_w, mn.b_h, mn.font, func=lambda: quit())
+                  ]
+
+        self.screen.blit(background, (0, 0))
+        for button in buttons:
+            button.draw(self.screen)
+            button.update()
+
 
     def update(self):
         self.event()
@@ -285,7 +291,3 @@ class Game(p.sprite.Sprite):
 
 
         p.display.flip()
-
-
-if __name__ == "__main__":
-    game = Game()
