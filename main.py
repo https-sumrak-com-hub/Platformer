@@ -1,8 +1,12 @@
 import pygame as p
 import screeninfo as si
 import pytmx as pt
+from PIL import Image
+
+from txt.main import scr_w
 
 p.init()
+p.mixer.init()
 
 SCREEN_WIDTH = 1920
 SCREEN_HEIGHT = 1080
@@ -14,6 +18,29 @@ def li(file, width, height):
     image = p.image.load(file).convert_alpha()
     image = p.transform.scale(image, (width, height))
     return image
+
+def load_anims(location):
+    animations = {
+        "r": [],
+        "l": []
+    }
+
+    tile_size = (int(location[-12:-5].split(" x ")[0]), int(location[-12:-5].split(" x ")[1]))
+
+    with Image.open(location) as img:
+        count_images =  img.width // tile_size[0]
+
+        spritesheet = li(location, img.width, img.height)
+
+    for i in range(count_images):
+        x = i * tile_size[0]
+        y = 0
+        rect = p.Rect(x, y, tile_size[0], tile_size[1])
+        animations["r"].append(p.transform.scale(spritesheet.subsurface(rect), (tile_size[0] * set_tile_scale, tile_size[1] * set_tile_scale)))
+
+    animations["l"].append(p.transform.flip(image, True, False) for image in animations["r"])
+
+    return animations
 
 class Platform(p.sprite.Sprite):
     def __init__(self, image, x, y, width, height, layer_name, id):
@@ -36,8 +63,13 @@ class Player(p.sprite.Sprite):
     def __init__(self, screen):
         super(Player, self).__init__()
         self.screen = screen
+        self.move_que = True
+
+        self.anims = load_anims("sprites/Sprite Pack 3/2 - Twiggy/Back_Turned (32 x 32).png")
 
         self.image = li("maps/Tiles/Assets/Assets.png", 50, 50)
+
+
 
         self.rect = self.image.get_rect()
         self.rect.center = (200, 100)
@@ -52,7 +84,8 @@ class Player(p.sprite.Sprite):
 
         self.collides = {
             "bridge": [46, 47, 48],
-            "ladder": [43, 44, 45]
+            "ladder": [43, 44],
+            "thorns": [45]
         }
 
     def gravity_checker(self, platforms, vector):
@@ -74,6 +107,7 @@ class Player(p.sprite.Sprite):
                         self.rect.top = platform.rect.bottom
                         self.velocity_y = 0
 
+
     def collide_checker(self, collides):
         keys = p.key.get_pressed()
 
@@ -93,43 +127,71 @@ class Player(p.sprite.Sprite):
                     if keys[p.K_s]:
                         self.velocity_y = -self.vel_def
 
+                if collide.id in self.collides["thorns"]:
+                    self.move_que = False
+                    self.dead_anim()
+
+
     def move(self):
         keys = p.key.get_pressed()
 
-        if keys[p.K_d] or keys[p.K_a] or keys[p.K_SPACE] or keys[p.K_LSHIFT]:
-            if keys[p.K_SPACE] and self.jump_que:
-                self.velocity_y -= 30
-                self.jump_que = False
+        if self.move_que:
+            if keys[p.K_d] or keys[p.K_a] or keys[p.K_SPACE] or keys[p.K_LSHIFT]:
+                if keys[p.K_SPACE] and self.jump_que:
+                    self.velocity_y -= 30
+                    self.jump_que = False
 
-            if keys[p.K_LSHIFT]:
-                self.velocity_y = self.vel_def
+                if keys[p.K_LSHIFT]:
+                    self.velocity_y = self.vel_def
 
-            if keys[p.K_d]:
-                self.velocity_x = self.vel_def
+                if keys[p.K_d]:
+                    self.velocity_x = self.vel_def
 
-            elif keys[p.K_a]:
-                self.velocity_x = -self.vel_def
+                elif keys[p.K_a]:
+                    self.velocity_x = -self.vel_def
+
+                else:
+                    self.velocity_x *= 0.2
 
             else:
                 self.velocity_x *= 0.2
 
-        else:
-            self.velocity_x *= 0.2
-
         self.velocity_y += self.gravity
 
-        self.rect.x += self.velocity_x
+    def dead_anim(self):
+        dead_text = Image.open("dead_text.png").convert("RGBA")
+        datas = dead_text.getdata()
+        new_data = []
+
+        dead_sound = p.music.mixer.load("dead_sound.mp3")
+        dead_background = li("dead.png", SCREEN_WIDTH, SCREEN_HEIGHT)
+
+        p.music.mixer.play(dead_sound)
+        self.screen.blit(dead_background, (0, 0))
+
+        rect = dead_text.get_rect()
+        rect.center = (SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2)
+
+        for i in range(256):
+            for item in datas:
+                # Изменить альфа (прозрачность) на 128 (50% прозрачности, 0=прозр., 255=непрозр.)
+                new_data.append((*item[:3], i))
+
+            self.screen.blit(dead_text, rect)
 
     def update(self, map_layers):
+        self.collide_checker(map_layers["collides"])
         self.move()
+        self.rect.x += self.velocity_x
         self.gravity_checker(map_layers["platform"], "x")
         self.rect.y += self.velocity_y
         self.gravity_checker(map_layers["platform"], "y")
-        self.collide_checker(map_layers["collides"])
+
 
     def draw(self, camX, camY):
-        self.screen.blit(self.image,
-                         (self.rect.x - camX, self.rect.y - camY))
+        self.screen.blit(self.image, (self.rect.x - camX, self.rect.y - camY))
+
+
 
 class Game(p.sprite.Sprite):
     def __init__(self):
@@ -173,7 +235,8 @@ class Game(p.sprite.Sprite):
                     layer_name,
                     gid
                 )
-
+                if layer_name == "collides":
+                    print(gid)
                 platforms.add(platform)
 
         return platforms
@@ -218,7 +281,6 @@ class Game(p.sprite.Sprite):
                                  (platform.set_coords_x - self.camX,
                                   platform.set_coords_y - self.camY))
 
-                # Игрок тоже с камерой
         self.pers.draw(self.camX, self.camY)
 
 
