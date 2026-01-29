@@ -155,12 +155,12 @@ class Menu:
                         self.mode = self.actual_modes[self.actual_modes.index(self.mode) - 1]
 
     def update(self):
-        self.actual_modes = ["main_menu", f"{self.Mmode}", f"{self.Smode}"]
+        self.actual_modes = ["main_menu", f"{self.mode}", f"{self.Smode}"]
         for button in self.modes[self.mode]["buttons"]:
             button.update()
 
     def Play(self):
-        self.Mmode = "Mgame"
+        self.mode = "Mgame"
         main.Game()
 
     def start(self):
